@@ -6,11 +6,20 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:src="@drawable/flag"
+        android:layout_centervertical="true"
+        android:layout_centerhorizontal="true"
+        />
+
+
     <TextView
         android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Bonjour le monde!"
+        android:text="Hello world"
         tools:layout_editor_absoluteX="87dp"
         tools:layout_editor_absoluteY="273dp" />
 
