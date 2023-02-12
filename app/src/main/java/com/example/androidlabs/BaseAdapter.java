@@ -2,11 +2,13 @@ package com.example.androidlabs;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.location.Location;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -15,7 +17,9 @@ import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 
-public class BaseAdapter extends ArrayAdapter<Todo> {
+public class BaseAdapter extends ArrayAdapter<Todo> implements Filterable {
+
+
 
   public BaseAdapter(@NonNull Context context, ArrayList<Todo> arrayList) {
     super(context,0, arrayList);
