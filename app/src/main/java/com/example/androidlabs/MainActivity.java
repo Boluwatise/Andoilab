@@ -1,100 +1,172 @@
 package com.example.androidlabs;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.SwitchCompat;
 
-import android.content.DialogInterface;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.EditText;
-import android.widget.ListView;
+import android.util.Log;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Objects;
 
 
 public class MainActivity extends AppCompatActivity {
-  BaseAdapter adapter ;
-  ArrayList <Todo> todos;
-  ListView listView ;
-
-  MyDatabaseOpenHelper dbHelper;
-
 
   @Override
-  public void onResume() {
-    super.onResume();
-    todos = new ArrayList<>();
-    loadTodos();
-    adapter = new BaseAdapter(this, todos);
-    listView.setAdapter(adapter);
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.activity_main);
+
+    final ProgressBar progressBar = (ProgressBar) findViewById(R.id.simpleProgressBar);
+    progressBar.setProgress(0);
+
+    CatImages catImages = new CatImages();
+
+    catImages.execute("https://cataas.com/cat?json=true");
+
   }
 
-  @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-    dbHelper = new MyDatabaseOpenHelper(getApplicationContext());
-    todos = new ArrayList<>();
-    loadTodos();
+
+  class CatImages extends AsyncTask<String, Integer, String> {
+
+    ProgressBar bar = findViewById(R.id.simpleProgressBar);
+    OutputStream outputStream;
+
+    ImageView image = findViewById(R.id.image);
 
 
-    listView =  findViewById(R.id.listView);
+    @Override
+    protected String doInBackground(String... strings) {
 
 
-     adapter = new BaseAdapter(this,todos);
+      String imageUrl = strings[0];
 
-    listView.setAdapter(adapter);
-
-
-
-    listView.setOnItemLongClickListener((adapterView, view, i, l) -> {
-      Todo listItem = adapter.getItem(i);
-
-      AlertDialog.Builder alert = new AlertDialog.Builder(MainActivity.this);
-      alert.setTitle("Are you sure you want to delete this?");
-      alert.setMessage("Selected row is"+i);
-      alert.setCancelable(false);
-      alert.setPositiveButton("Yes", (dialog, which) -> {
-        dbHelper.deleteTodo(listItem);
-        adapter.remove(listItem);
-        adapter.notifyDataSetChanged();
-      });
-      alert.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-
-      alert.show();
+      HttpURLConnection connection;
+      InputStream is;
+      InputStreamReader isr;
 
 
-      return false;
-    });
+      try {
+
+
+       //Infinite loop to display cat photos from the url
+        while (true) {
+          connection = (HttpURLConnection) new URL(imageUrl).openConnection();
+          connection.connect();
+
+          is = new URL(imageUrl).openStream();
+          isr = new InputStreamReader(is);
+
+          BufferedReader reader = new BufferedReader(isr);
+          StringBuilder json = new StringBuilder();
+          int c;
+
+          //While loop to get the data from the input stream reader to set up the json object
+          while ((c = reader.read()) != -1) {
+            json.append((char) c);
+          }
+          try {
+            JSONObject jsonObject = new JSONObject(json.toString());
+            String filename = jsonObject.getString("_id") + ".jpeg";
+            URL url = new URL("https://cataas.com" + jsonObject.getString("url"));
+
+            //A function that handles the logic for downloading and using images on the device
+            checkImageExists(filename, url);
+
+
+            //update the progress bar
+            for (int i = 0; i <= 100; i++) {
+              try {
+                publishProgress(i);
+                Thread.sleep(30);
+              } catch (Exception e) {
+                e.printStackTrace();
+              }
+            }
+            connection.disconnect();
+
+          } catch (JSONException err) {
+            Log.d("Error", err.toString());
+          }
+
+
+        }
+      } catch (MalformedURLException e) {
+        throw new RuntimeException(e);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+
 
     }
 
-  public void onAddItem(View v) {
-    EditText etNewItem = findViewById(R.id.editNewItem);
-    boolean urgent = ((SwitchCompat) findViewById(R.id.urgent)).isChecked();
-    Todo newTodo = new Todo (etNewItem.getText().toString(),urgent);
-    adapter.add(newTodo);
-    dbHelper.addTodo(newTodo);
-    etNewItem.setText("");
-    adapter.notifyDataSetChanged();
+    @Override
+    protected void onProgressUpdate(Integer... values) {
+      super.onProgressUpdate(values);
+      if (this.bar != null) {
+        bar.setProgress(values[0]);
+      }
+
+    }
+
+
+    public boolean checkImageExists(String filename, URL url) throws IOException {
+      File file = new File(getFilesDir()
+        + File.separator + filename);
+
+      if (file.exists()) {
+        //Do something
+        Bitmap myBitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
+        runOnUiThread(() -> {
+          // Stuff that updates the UI
+          image.setImageBitmap(myBitmap);
+        });
+
+        return true;
+      } else {
+        //Download the image and store on our device
+        storeImage(file, url);
+        return false;
+      }
+    }
+
+
+    public void storeImage(File file, URL url) throws IOException {
+
+      Bitmap downloadImage = BitmapFactory.decodeStream(url.openConnection().getInputStream());
+      outputStream = new FileOutputStream(file);
+      downloadImage.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      outputStream.write(bytes.toByteArray());
+
+      Bitmap localImage = BitmapFactory.decodeFile(file.getAbsolutePath());
+
+      // Stuff that updates the UI
+      runOnUiThread(() -> {
+        image.setImageBitmap(localImage);
+
+      });
+    }
+
+
   }
-
-
-  public void loadTodos(){
-    // Get all todos from database and add to arraylist
-    List<Todo> todos = dbHelper.getTodos();
-    this.todos.addAll(todos);
-  }
-
-
-
-
 
 
 }
