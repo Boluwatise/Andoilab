@@ -1,6 +1,12 @@
 package com.example.androidlabs;
 
+import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 
@@ -8,10 +14,17 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
 import android.widget.ListView;
+import android.widget.Toast;
+
+import com.google.android.material.navigation.NavigationView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -30,133 +43,122 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-  BaseAdapter adapter;
 
-  ListView listView;
-  ArrayList<Person> starWarsC = new ArrayList<>();
 
-  boolean tabletView;
+  private DrawerLayout mDrawer;
+  private Toolbar toolbar;
+  private NavigationView nvDrawer;
 
+  // Make sure to be using androidx.appcompat.app.ActionBarDrawerToggle version.
+  private ActionBarDrawerToggle drawerToggle;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    setContentView(R.layout.list_view);
-    StarWars connection = new StarWars();
-    listView = findViewById(R.id.list_view);
-    FrameLayout frameLayout = findViewById(R.id.frame_layout_alt);
+    setContentView(R.layout.activity_main);
 
-    if (frameLayout == null) {
-      tabletView = false;
-    } else {
-      tabletView = true;
-    }
-    connection.execute("https://swapi.dev/api/people/?format=json");
+    // Set a Toolbar to replace the ActionBar.
+    toolbar = (Toolbar) findViewById(R.id.toolbar);
+    setSupportActionBar(toolbar);
+
+    // This will display an Up icon (<-), we will replace it with hamburger later
+    // Find our drawer view
+    mDrawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+    drawerToggle = setupDrawerToggle();
+
+    // Setup toggle to display hamburger icon with nice animation
+    drawerToggle.setDrawerIndicatorEnabled(true);
+    drawerToggle.syncState();
+
+    // Tie DrawerLayout events to the ActionBarToggle
+    mDrawer.addDrawerListener(drawerToggle);
+
+    // Find our drawer view
+    mDrawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+    nvDrawer = (NavigationView) findViewById(R.id.nvView);
+    // Setup drawer view
+    setupDrawerContent(nvDrawer);
+  }
+
+  @Override
+  public boolean onCreateOptionsMenu(Menu menu) {
+    MenuInflater inflater = getMenuInflater();
+    inflater.inflate(R.menu.menu_info, menu);
+    return true;
+  }
+
+  public void toastMessage(MenuItem item){
+    Toast.makeText(this, "You clicked on "+item.getTitle(), Toast.LENGTH_LONG).show();
   }
 
 
-  class StarWars extends AsyncTask<String, Integer, List<Person>> {
+  private ActionBarDrawerToggle setupDrawerToggle() {
+    // NOTE: Make sure you pass in a valid toolbar reference.  ActionBarDrawToggle() does not require it
+    // and will not render the hamburger icon without it.
+    return new ActionBarDrawerToggle(this, mDrawer, toolbar, R.string.drawer_open,  R.string.drawer_close);
+  }
 
-    ArrayList<Person> list;
-
-    @Override
-    protected List<Person> doInBackground(String... strings) {
-
-
-      String url = strings[0];
-
-      HttpURLConnection connection;
-      InputStream is;
-      InputStreamReader isr;
-
-      try {
-
-        //Infinite loop to display cat photos from the url
-        connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.connect();
-
-        is = new URL(url).openStream();
-        isr = new InputStreamReader(is);
-
-        BufferedReader reader = new BufferedReader(isr);
-        StringBuilder json = new StringBuilder();
-        int c;
-
-        //While loop to get the data from the input stream reader to set up the json object
-        while ((c = reader.read()) != -1) {
-          json.append((char) c);
-        }
-        try {
-          JSONObject jsonObject = new JSONObject(json.toString());
-
-          JSONArray resultsArray = jsonObject.getJSONArray("results");
-          list = new ArrayList<>();
-
-          for (int i = 0; i < resultsArray.length(); i++) {
-            JSONObject obj = resultsArray.getJSONObject(i);
-            String name = obj.getString("name");
-            String height = obj.getString("height");
-            String mass = obj.getString("mass");
-            Person temp = new Person(name, height, mass);
-            list.add(temp);
-
-          }
-
-          connection.disconnect();
-
-        } catch (JSONException err) {
-          Log.d("Error", err.toString());
-        }
-
-
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-
-      return list;
-    }
-
-    @Override
-    protected void onProgressUpdate(Integer... values) {
-      super.onProgressUpdate(values);
-
-
-    }
-
-    @Override
-    protected void onPostExecute(List<Person> result) {
-
-      // do something with the response and statusCode
-      starWarsC.addAll(result);
-      adapter = new BaseAdapter(getApplicationContext(), starWarsC);
-      listView.setAdapter(adapter);
-
-
-      listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+  private void setupDrawerContent(NavigationView navigationView) {
+    navigationView.setNavigationItemSelectedListener(
+      new NavigationView.OnNavigationItemSelectedListener() {
         @Override
-        public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-          Person listItem = adapter.getItem(i);
-          if (tabletView) {
-            DetailsFragment fragmentDemo = DetailsFragment.newInstance(listItem.getName(), listItem.getHeight(), listItem.getMass());
-            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-            ft.replace(R.id.frame_layout_alt, fragmentDemo);
-            ft.commit();
-          } else {
-            Intent mIntent = new Intent(getApplicationContext(), EmptyActivity.class);
-            Bundle mBundle = new Bundle();
-            mBundle.putString("name", listItem.getName());
-            mBundle.putString("height", listItem.getHeight());
-            mBundle.putString("mass", listItem.getMass());
-            mIntent.putExtras(mBundle);
-            startActivity(mIntent);
-          }
+        public boolean onNavigationItemSelected(MenuItem menuItem) {
+          selectDrawerItem(menuItem);
+          return true;
         }
       });
+  }
 
+  public void selectDrawerItem(MenuItem menuItem) {
+    // Create a new fragment and specify the fragment to show based on nav item clicked
+    Fragment fragment = null;
+    Class fragmentClass;
+    switch(menuItem.getItemId()) {
+      case R.id.fragment_host:
+        fragmentClass = HostFragment.class;
+        break;
+      case R.id.nav_second_fragment:
+        fragmentClass = DadJokes.class;
+        break;
+      case R.id.nav_third_fragment:
+        fragmentClass =HostFragment.class;
+        finishAffinity();
+        break;
+      default:
+        fragmentClass = HostFragment.class;
     }
 
+    try {
+      fragment = (Fragment) fragmentClass.newInstance();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
 
+    // Insert the fragment by replacing any existing fragment
+    FragmentManager fragmentManager = getSupportFragmentManager();
+    fragmentManager.beginTransaction().replace(R.id.flContent, fragment).commit();
+
+    // Highlight the selected item has been done by NavigationView
+    menuItem.setChecked(true);
+    // Set action bar title
+    setTitle(menuItem.getTitle());
+    // Close the navigation drawer
+    mDrawer.closeDrawers();
   }
+
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    // The action bar home/up action should open or close the drawer.
+    switch (item.getItemId()) {
+      case android.R.id.home:
+        mDrawer.openDrawer(GravityCompat.START);
+        return true;
+    }
+
+    return super.onOptionsItemSelected(item);
+  }
+
+
 
 
 }

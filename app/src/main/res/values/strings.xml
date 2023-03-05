@@ -1,10 +1,16 @@
 <resources>
-  <string name="app_name">CST2335 Lab 6</string>
-  <string name="hello_blank_fragment">Hello blank fragment</string>
-  <string name="fill">fill_me</string>
-  <string name="name">Name:</string>
-  <string name="height">Height:</string>
-  <string name="mass">Mass:</string>
+    <string name="app_name">CST2335 Lab 8</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="fill">fill_me</string>
+    <string name="name">Name:</string>
+    <string name="height">Height:</string>
+    <string name="mass">Mass:</string>
+
+  <string name="drawer_open">Open navigation drawer</string>
+  <string name="drawer_close">Close navigation drawer</string>
+  <string name="dad_joke">  What do sprinters eat before they race? \n Nothing. They fast.</string>
+
+
 
 
 </resources>
